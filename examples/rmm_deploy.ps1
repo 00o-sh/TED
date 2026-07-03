@@ -182,6 +182,29 @@ function Get-LatestTedVersion {
     return (Split-Path -Path $location -Leaf) -replace '[a-zA-Z]'
 }
 
+function ConvertTo-ComparableVersion {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $null
+    }
+
+    $clean = ($Value -replace '[^0-9.]', '').Trim('.')
+    if ([string]::IsNullOrWhiteSpace($clean)) {
+        return $null
+    }
+
+    $parts = @($clean.Split('.') | Where-Object { $_ -ne '' })
+    while ($parts.Count -lt 4) { $parts += '0' }
+
+    try {
+        return [version]([string]::Join('.', $parts[0..3]))
+    }
+    catch {
+        return $null
+    }
+}
+
 function Update-CompanyLogo {
     if ([string]::IsNullOrWhiteSpace($CompanyLogoDownloadUrl)) {
         return
@@ -332,10 +355,22 @@ function Invoke-Main {
     $latestVersion = Get-LatestTedVersion
     $installedVersion = (Get-Item -Path $TedPath).VersionInfo.FileVersion
 
+    # Compare as normalised 4-part versions so a "2.1.0" tag and a "2.1.0.0"
+    # FileVersion are treated as equal; fall back to a string compare if either
+    # value can't be parsed.
+    $latestComparable = ConvertTo-ComparableVersion $latestVersion
+    $installedComparable = ConvertTo-ComparableVersion $installedVersion
+    $updateAvailable = if ($null -ne $latestComparable -and $null -ne $installedComparable) {
+        $latestComparable -ne $installedComparable
+    }
+    else {
+        $latestVersion -ne $installedVersion
+    }
+
     if ($null -eq $latestVersion) {
         Update-CompanyLogo
     }
-    elseif ($latestVersion -ne $installedVersion) {
+    elseif ($updateAvailable) {
         Write-Log "TED $latestVersion is available; replacing installed version $installedVersion."
         Remove-Item -Path $TedPath -Force
         Install-Ted
