@@ -1,0 +1,11 @@
+# Code owners for salientmsp/TED
+#
+# Listed owners are requested for review automatically and — when branch
+# protection has "Require review from Code Owners" enabled for the target
+# branch — an approving review from an owner is required before merge.
+#
+# Multiple owners on one line means review from ANY one of them satisfies the
+# rule (OR, not AND). Both accounts need write access for their approvals to
+# count as code-owner reviews.
+
+* @00o-sh @elisalient
