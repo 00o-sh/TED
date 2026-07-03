@@ -12,6 +12,11 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # Exposed as job-level env so the signing step's `if:` can test it —
+      # the `secrets` context is not permitted inside `if` conditions.
+      CODESIGN_PFX_B64: ${{ secrets.CODESIGN_PFX_B64 }}
+      CODESIGN_PW: ${{ secrets.CODESIGN_PW }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,11 +35,8 @@ jobs:
       # provisioned a code-signing certificate. See README for how to generate
       # an internal code-signing cert and populate the secrets.
       - name: Sign binaries
-        if: ${{ secrets.CODESIGN_PFX_B64 != '' }}
+        if: ${{ env.CODESIGN_PFX_B64 != '' }}
         shell: pwsh
-        env:
-          CODESIGN_PFX_B64: ${{ secrets.CODESIGN_PFX_B64 }}
-          CODESIGN_PW: ${{ secrets.CODESIGN_PW }}
         run: |
           $pfxPath = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CODESIGN_PFX_B64))
