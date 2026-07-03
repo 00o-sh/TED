@@ -35,6 +35,8 @@ $GitHubRepo = 'salientmsp/TED'
 $CompanyLogoFileName = 'company-logo.png'
 $CompanyLogoDownloadUrl = '' # Optional. Example: 'https://example.com/assets/company-logo.png'
 $UpdaterScriptDownloadUrl = '' # Optional. Host your customized copy here if you enable $UpdateSelf.
+# Only used when $UpdateSelf is $true (the self-registered Windows update task).
+# Ignored for RMM-driven updates.
 $TaskName = 'Update TED'
 $UpdateScheduleDay = 'Tuesday'
 $UpdateScheduleTime = '8:00AM'
