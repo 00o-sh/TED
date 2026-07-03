@@ -1,0 +1,77 @@
+<#
+    Gorelo paste-ready: deploy the Salient code-signing Root CA to the local
+    machine trust stores. Paste this whole body into a Gorelo PowerShell task
+    and run it as SYSTEM. No parameters - Gorelo substitutes the file variable
+    token below with the attached certificate's local path at runtime.
+
+    Imports the PUBLIC root certificate into:
+      - LocalMachine\Root             (chain trust)
+      - LocalMachine\TrustedPublisher (silent execution of signed binaries)
+
+    Idempotent (safe to re-run every cycle) and refuses anything with a private
+    key. Deploy only the PUBLIC root certificate (.cer / .crt) - never a .pfx.
+#>
+
+# Gorelo replaces this token with the attached file's local path before running.
+$CertSource = '$gorelo:file.SalientCodeSigningRootCACert'
+
+# Root = chain trust; TrustedPublisher = silent signed-exe execution (AppLocker/SmartScreen).
+$StoreNames = @('Root', 'TrustedPublisher')
+
+$ErrorActionPreference = 'Stop'
+
+# Resolve the source to a local file (accepts a staged path or an https URL).
+if ($CertSource -match '^https?://') {
+    $certPath = Join-Path -Path $env:TEMP -ChildPath ('SalientRootCA_{0}.cer' -f [guid]::NewGuid().ToString('N'))
+    Invoke-WebRequest -Uri $CertSource -OutFile $certPath -UseBasicParsing
+    $temporary = $true
+}
+elseif (Test-Path -LiteralPath $CertSource) {
+    $certPath = (Resolve-Path -LiteralPath $CertSource).Path
+    $temporary = $false
+}
+else {
+    throw "Certificate source '$CertSource' is not an https URL or an existing file path. (Did Gorelo substitute the file variable?)"
+}
+
+try {
+    $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath)
+
+    # Never push a private key into a machine trust store.
+    if ($cert.HasPrivateKey) {
+        throw 'The supplied certificate contains a private key. Deploy only the PUBLIC root certificate.'
+    }
+
+    Write-Host "Root CA subject : $($cert.Subject)"
+    Write-Host "Thumbprint      : $($cert.Thumbprint)"
+    Write-Host "Valid until     : $($cert.NotAfter)"
+
+    foreach ($storeName in $StoreNames) {
+        $store = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+            $storeName,
+            [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+        $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        try {
+            $match = $store.Certificates.Find(
+                [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
+                $cert.Thumbprint,
+                $false)
+
+            if ($match.Count -gt 0) {
+                Write-Host "[$storeName] already trusts $($cert.Thumbprint); skipping."
+            }
+            else {
+                $store.Add($cert)
+                Write-Host "[$storeName] imported $($cert.Thumbprint)."
+            }
+        }
+        finally {
+            $store.Close()
+        }
+    }
+}
+finally {
+    if ($temporary) {
+        Remove-Item -LiteralPath $certPath -Force -ErrorAction SilentlyContinue
+    }
+}
