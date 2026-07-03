@@ -144,6 +144,8 @@ Run it elevated / as SYSTEM, passing the certificate as a path or https URL. Und
 powershell -ExecutionPolicy Bypass -File deploy_rootca.ps1 -CertSource '$gorelo:file.SalientCodeSigningRootCACert'
 ```
 
+For RMMs that only run a pasted script body (no arguments), use [`deploy_rootca_gorelo.ps1`](https://github.com/salientmsp/TED/blob/main/examples/deploy_rootca_gorelo.ps1) instead — it is parameter-free, with the file variable token set inline at the top, so you can paste it straight into a Gorelo PowerShell task (run as SYSTEM).
+
 Once the root CA is deployed and releases are signed, set `$ExpectedSignerThumbprint` in `rmm_deploy.ps1` to require that binaries are signed by your certificate.
 
 ## Verifying downloads
