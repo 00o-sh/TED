@@ -100,6 +100,12 @@ Inline rich text formatting can be used inside lines:
 ted -line "<color=purple>OS: </color><color=green>@osName</color>" -line "<b><u>Device:</u></b> <i>@machineName</i>"
 ```
 
+Add `-backdrop` (or `-bg`) to render the image behind the text as a watermark instead of stacking it above the text:
+
+```shell
+ted -di path/to/dark_image.png -li path/to/light_image.png -backdrop -line "@userName" -line "@machineName"
+```
+
 In terms of real world usage, we've found this to be a fantastic tool for helping clients quickly identify key information about their machine whilst on the phone with them.
 
 ![TED Screenshot 1]( https://healthit.com.au/TEDScreenshot1_res1.png) ![TED Screenshot 2]( https://healthit.com.au/TEDScreenshot2_res1.png)
